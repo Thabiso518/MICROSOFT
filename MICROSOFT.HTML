@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NIST & Microsoft SDL — Animated Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0f1f;
+      --card:#0f152b;
+      --text:#e8f1ff;
+      --muted:#a9b7d1;
+      --glow: 0 0 30px rgba(110,170,255,.35), 0 0 60px rgba(160,110,255,.2);
+      --radius:22px;
+      --shadow: 0 10px 40px rgba(0,0,0,.35);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+      color:var(--text); background:var(--bg); overflow-x:hidden;
+    }
+
+    /* ================= Animated background (moving circles) ================= */
+    .bg{
+      position:fixed; inset:0; overflow:hidden; z-index:-1; filter:blur(1px) saturate(120%);
+      background: radial-gradient(1000px 600px at 10% -10%, rgba(73,119,255,.20), transparent 60%),
+                  radial-gradient(900px 600px at 120% 10%, rgba(255,71,153,.13), transparent 60%),
+                  radial-gradient(900px 700px at 40% 120%, rgba(23,206,146,.15), transparent 60%),
+                  radial-gradient(1100px 900px at 90% 110%, rgba(255,190,69,.12), transparent 60%);
+    }
+    .bubble{position:absolute; border-radius:50%; opacity:.35; mix-blend-mode:screen; will-change:transform,opacity;}
+    @keyframes floaty {
+      0%{ transform: translate3d(var(--xStart), var(--yStart), 0) scale(var(--s)); opacity:.05 }
+      50%{ transform: translate3d(var(--xMid), var(--yMid), 0) scale(calc(var(--s)*1.15)); opacity:.45 }
+      100%{ transform: translate3d(var(--xEnd), var(--yEnd), 0) scale(var(--s)); opacity:.05 }
+    }
+
+    /* ================= Layout ================= */
+    header{
+      position:sticky; top:0; z-index:10; backdrop-filter:saturate(160%) blur(6px);
+      background:linear-gradient(180deg, rgba(10,15,31,.9), rgba(10,15,31,.55) 60%, transparent);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .wrap{max-width:1200px; margin:0 auto; padding:18px 22px;}
+    .hero{display:grid; gap:14px; padding:26px 22px 10px}
+    .title{font-weight:800; letter-spacing:.3px; font-size:clamp(24px, 3.6vw, 40px)}
+    .subtitle{color:var(--muted); font-weight:500; font-size:clamp(13px, 1.8vw, 16px)}
+
+    .board{max-width:1200px; margin:28px auto; padding:0 22px 60px; display:grid; gap:32px}
+
+    /* Section cards */
+    .section{
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08); border-radius:var(--radius); box-shadow:var(--shadow);
+      position:relative; overflow:hidden;
+    }
+    .section::before{
+      content:""; position:absolute; inset:-2px; border-radius:inherit; padding:2px;
+      background:conic-gradient(from var(--angle),
+        #6ab0ff, #a16bff, #ff6bb5, #ffb86b, #5bffd7, #6ab0ff);
+      -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      animation: spin 9s linear infinite;
+      opacity:.55; filter:blur(.5px);
+    }
+    @keyframes spin{ to{ --angle: 1turn; } }
+
+    .section-inner{position:relative; padding:22px}
+    .section h2{margin:0 0 16px 0; font-size:clamp(18px, 2.6vw, 26px)}
+    .mini{color:var(--muted); font-size:14px}
+
+    /* Flow lanes */
+    .lane{display:grid; grid-auto-flow:column; grid-auto-columns:minmax(220px, 1fr); gap:16px; padding:10px; overflow-x:auto; scroll-snap-type:x mandatory}
+    .lane::-webkit-scrollbar{height:10px}
+    .lane::-webkit-scrollbar-thumb{background:linear-gradient(90deg, #6ab0ff, #a16bff, #ff6bb5); border-radius:20px}
+
+    /* Step cards */
+    .step{
+      position:relative; isolation:isolate; scroll-snap-align:center; cursor:pointer;
+      background:#0e1a39; border-radius:18px; padding:16px 14px; min-height:140px;
+      border:1px solid rgba(255,255,255,.08); box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      transition: transform .25s ease, box-shadow .25s ease, background .25s ease, filter .25s ease;
+      /* dazzling animated gradient border */
+    }
+
+    .step::before{
+      content:""; position:absolute; inset:-1px; border-radius:inherit;
+      background:conic-gradient(from var(--spin, 0deg), rgba(90,160,255,.8), rgba(200,120,255,.85), rgba(255,120,180,.9), rgba(255,190,90,.9), rgba(90,255,210,.85), rgba(90,160,255,.8));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude; padding:1px; filter:blur(.6px); opacity:.75;
+      animation:borderSpin 6s linear infinite;
+      z-index:-1;
+    }
+    @keyframes borderSpin{ to{ transform: rotate(360deg) } }
+
+    .step .name{font-weight:700; margin-bottom:8px; font-size:16px}
+    .step .desc{color:#d6e2ff; opacity:.9; font-size:13px; line-height:1.35}
+
+    .step:hover{
+      transform: translateY(-6px) scale(1.02) rotate3d(.1,1,0, .6deg);
+      box-shadow: 0 12px 40px rgba(103, 132, 255, .35), 0 0 0 1px rgba(255,255,255,.06);
+      filter:saturate(120%);
+    }
+
+    .arrow{ display:flex; align-items:center; justify-content:center; color:#9fb8ff; font-weight:700; }
+
+    /* Tooltip on hover */
+    .step[data-tip] { position:relative; }
+    .step[data-tip]:hover::after{
+      content: attr(data-tip);
+      position:absolute; left:50%; transform:translateX(-50%);
+      bottom: -10px; translate: 0 100%; white-space:nowrap; pointer-events:none;
+      background: rgba(15,25,55,.95); color:#dfe8ff; padding:8px 10px; font-size:12px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.08); box-shadow: var(--glow);
+    }
+
+    /* Floating spark cursor */
+    .spark{ position:fixed; width:14px; height:14px; border-radius:50%; pointer-events:none; mix-blend-mode:screen; z-index:20; opacity:.85;
+      background:radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.75) 35%, transparent 55%),
+                 radial-gradient(circle at 70% 70%, #6ab0ff 10%, #a16bff 45%, transparent 70%);
+      filter:blur(.3px) drop-shadow(0 0 18px rgba(150,150,255,.55));
+      transform:translate(-50%, -50%);
+    }
+
+    /* Footer */
+    footer{ text-align:center; color:var(--muted); padding:30px 20px }
+    .pill{ display:inline-flex; gap:10px; padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.03)}
+    .kbd{ padding:2px 8px; border-radius:8px; background:#101a33; color:#cfe1ff; border:1px solid rgba(255,255,255,.1)}
+
+    /* Responsive tweaks */
+    @media (max-width:720px){
+      .lane{grid-auto-columns:minmax(180px, 75vw)}
+      .step{min-height:130px}
+      .step .name{font-size:15px}
+      .step .desc{font-size:12px}
+    }
+  </style>
+</head>
+<body>
+  <!-- Background layer & bubbles -->
+  <div class="bg" id="bg"></div>
+
+  <div class="spark" id="spark" hidden></div>
+
+  <header>
+    <div class="wrap hero">
+      <div class="title">Secure SDLC — <span style="opacity:.9">NIST & Microsoft SDL</span></div>
+      <div class="subtitle">Quick, visual notes with animated steps, hover effects, and a living background.</div>
+    </div>
+  </header>
+
+  <main class="board">
+    <!-- NIST Section -->
+    <section class="section">
+      <div class="section-inner">
+        <h2>🛡️ NIST Approach to Securing the SDLC</h2>
+        <div class="mini">Plan → Build → Install → Operate → Retire</div>
+        <div class="lane" aria-label="NIST steps">
+          <div class="step" data-tip="Define CIA needs + privacy; categorize data.">
+            <div class="name">1) Initiation</div>
+            <div class="desc">Plan what to protect (Confidentiality, Integrity, Availability) and identify privacy needs.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Risk assessment → security requirements → architecture.">
+            <div class="name">2) Development / Acquisition</div>
+            <div class="desc">Do risk assessment, set security requirements, design security architecture, and test early.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Certify controls before go‑live.">
+            <div class="name">3) Implementation / Assessment</div>
+            <div class="desc">Install the system, integrate into environment, certify security controls before launch.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Continuous monitoring + configuration management.">
+            <div class="name">4) Operations / Maintenance</div>
+            <div class="desc">Run, monitor, and update continuously; manage configuration; reauthorize after big changes.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Archive, sanitize media, close contracts.">
+            <div class="name">5) Disposal</div>
+            <div class="desc">Retire safely: archive critical info, sanitize/wipe data, dispose hardware/software properly.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Microsoft SDL Section -->
+    <section class="section">
+      <div class="section-inner">
+        <h2>💻 Microsoft Secure Development Lifecycle (SDL)</h2>
+        <div class="mini">Train → Plan → Design → Code → Verify → Release → Respond</div>
+        <div class="lane" aria-label="Microsoft SDL steps">
+          <div class="step" data-tip="Core security training for teams.">
+            <div class="name">1) Training</div>
+            <div class="desc">Give developers core security training and shared standards.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Bug bars & risk assessments.">
+            <div class="name">2) Requirements</div>
+            <div class="desc">Set security and privacy requirements, establish quality gates/bug bars, assess risks.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Threat modeling + reduce attack surface.">
+            <div class="name">3) Design</div>
+            <div class="desc">Use threat modeling and reduce attack surface; define design requirements.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Approved tools + static analysis.">
+            <div class="name">4) Implementation</div>
+            <div class="desc">Code with approved tools, deprecate unsafe functions, run static analysis.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Dynamic analysis + fuzzing.">
+            <div class="name">5) Verification</div>
+            <div class="desc">Test in action (dynamic analysis), fuzz testing, and review the attack surface again.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Incident response plan + final review.">
+            <div class="name">6) Release</div>
+            <div class="desc">Create incident response plan, conduct final security review, certify & archive.</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="step" data-tip="Execute when issues occur.">
+            <div class="name">7) Response</div>
+            <div class="desc">If incidents occur, execute the response plan and learn for the next release.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tips / Shortcuts -->
+    <section class="section">
+      <div class="section-inner">
+        <h2>⚡ Quick Tips</h2>
+        <div class="lane" style="grid-auto-columns:minmax(260px,1fr)">
+          <div class="step" data-tip="Early security = cheaper fixes">
+            <div class="name">Shift Left</div>
+            <div class="desc">Add security as early as possible to reduce cost and surprises.</div>
+          </div>
+          <div class="step" data-tip="Automate what you can">
+            <div class="name">Automate Checks</div>
+            <div class="desc">Static/dynamic scans and dependency checks catch issues every build.</div>
+          </div>
+          <div class="step" data-tip="Keep an eye in production">
+            <div class="name">Monitor & Patch</div>
+            <div class="desc">Continuously monitor, patch quickly, and re‑assess risk after major changes.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="pill">Hover cards • Drag sideways • Press <span class="kbd">G</span> to toggle extra glow • Press <span class="kbd">B</span> to toggle bubbles</div>
+  </footer>
+
+  <script>
+    // ========= Fancy moving circles (bubbles) =========
+    const bg = document.getElementById('bg');
+    const COLORS = [
+      'rgba(106,176,255,.45)','rgba(161,107,255,.42)','rgba(255,107,181,.43)','rgba(91,255,215,.40)','rgba(255,190,107,.38)'
+    ];
+    let bubbles = [];
+    function spawnBubbles(count=22){
+      clearBubbles();
+      for(let i=0;i<count;i++){
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        const size = 60 + Math.random()*220;
+        const color = COLORS[(Math.random()*COLORS.length)|0];
+        const x0 = (Math.random()*100).toFixed(2) + 'vw';
+        const y0 = (Math.random()*100).toFixed(2) + 'vh';
+        const x1 = (Math.random()*100).toFixed(2) + 'vw';
+        const y1 = (Math.random()*100).toFixed(2) + 'vh';
+        const x2 = (Math.random()*100).toFixed(2) + 'vw';
+        const y2 = (Math.random()*100).toFixed(2) + 'vh';
+        b.style.width = b.style.height = size+'px';
+        b.style.background = `radial-gradient(circle at 35% 35%, rgba(255,255,255,.45), ${color} 45%, transparent 70%)`;
+        b.style.setProperty('--xStart', x0);
+        b.style.setProperty('--yStart', y0);
+        b.style.setProperty('--xMid', x1);
+        b.style.setProperty('--yMid', y1);
+        b.style.setProperty('--xEnd', x2);
+        b.style.setProperty('--yEnd', y2);
+        b.style.setProperty('--s', (0.6 + Math.random()*1.1).toFixed(2));
+        b.style.animation = `floaty ${18 + Math.random()*26}s ease-in-out ${(-Math.random()*20).toFixed(2)}s infinite`;
+        bg.appendChild(b); bubbles.push(b);
+      }
+    }
+    function clearBubbles(){ bubbles.forEach(b=>b.remove()); bubbles=[] }
+    spawnBubbles();
+
+    // ========= Spark cursor =========
+    const spark = document.getElementById('spark');
+    let sparkOn = true; spark.hidden=false;
+    window.addEventListener('mousemove', (e)=>{
+      if(!sparkOn) return; 
+      spark.style.left = e.clientX + 'px';
+      spark.style.top = e.clientY + 'px';
+    });
+
+    // ========= Subtle tilt/parallax on hover =========
+    const steps = document.querySelectorAll('.step');
+    steps.forEach(card=>{
+      let px=0, py=0; let rect;
+      function move(e){
+        rect = rect || card.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        px = x*8; py = y*8; 
+        card.style.transform = `translateY(-6px) rotateX(${-py}deg) rotateY(${px}deg)`;
+        card.style.setProperty('--spin', (x*360) + 'deg');
+      }
+      card.addEventListener('mousemove', move);
+      card.addEventListener('mouseleave', ()=>{
+        card.style.transform = '';
+        rect = null;
+      });
+    });
+
+    // ========= Keyboard toggles =========
+    let glowOn = false; let bubblesOn = true;
+    addEventListener('keydown', (e)=>{
+      if(e.key.toLowerCase()==='g'){
+        glowOn = !glowOn; document.body.style.filter = glowOn ? 'drop-shadow(0 0 18px rgba(140,140,255,.35))' : ''
+      }
+      if(e.key.toLowerCase()==='b'){
+        bubblesOn = !bubblesOn; if(bubblesOn){spawnBubbles()} else {clearBubbles()}
+      }
+    });
+
+    // Accessibility: drag to scroll lanes on desktop
+    document.querySelectorAll('.lane').forEach(lane=>{
+      let isDown=false, startX, scrollLeft;
+      lane.addEventListener('mousedown', (e)=>{ isDown=true; lane.classList.add('drag'); startX=e.pageX - lane.offsetLeft; scrollLeft=lane.scrollLeft; e.preventDefault(); });
+      lane.addEventListener('mouseleave', ()=> isDown=false);
+      lane.addEventListener('mouseup', ()=> isDown=false);
+      lane.addEventListener('mousemove', (e)=>{
+        if(!isDown) return; const x=e.pageX - lane.offsetLeft; const walk=(x-startX)*1.2; lane.scrollLeft=scrollLeft - walk;
+      });
+    })
+  </script>
+</body>
+</html>
